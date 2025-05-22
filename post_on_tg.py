@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import telegram
 
 
-def main():
+def publish_on_telegram():
     load_dotenv()
     tg_token = os.getenv('TG_TOKEN')
     channel_id = '@smm_planer_test_r1'
@@ -23,7 +23,3 @@ def main():
             bot.send_message(chat_id=channel_id, text=post_text)
     else:
         bot.send_message(chat_id=channel_id, text=post_text)
-
-
-if __name__ == '__main__':
-    main()
