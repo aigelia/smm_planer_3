@@ -10,3 +10,6 @@ def get_google_table_records(path_to_google_credentials_file, google_table_url):
         sheet = table.sheet1
 
         return sheet.get_all_records()
+
+
+# TODO: Предоставить пользователю credentials?
