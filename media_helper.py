@@ -8,7 +8,7 @@ import requests
 def extract_drive_url(media_url):
     """Извлекает ID файла из ссылки на Google Drive."""
     patterns = [
-        r'drive\.google\.com\/fiйle\/d\/([^\/\?]+)',
+        r'drive\.google\.com\/file\/d\/([^\/\?]+)',
         r'drive\.google\.com\/open\?id=([^&]+)',
         r'drive\.google\.com\/uc\?id=([^&]+)'
     ]
