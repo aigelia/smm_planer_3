@@ -58,9 +58,3 @@ def get_image(media_url):
         media_type = 'unknown'
 
     return save_path, media_type
-
-
-if __name__ == '__main__':
-    image_path, image_type = get_image('https://www.investopedia.com/thmb/PuY9jSC3O7hx65zubwf4cJV5TPw=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-2149536121-26e918a317de4f618433b579f15135f8.jpg')
-    print(f"Файл сохранён: {image_path}")
-    print(f"Тип файла: {image_type}")
