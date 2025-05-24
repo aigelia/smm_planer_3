@@ -1,5 +1,6 @@
-from io import BytesIO
 from dotenv import load_dotenv
+from text_cleaner import replace_quotes_and_dashes
+from media_helper import get_image
 import os
 import requests
 import json
@@ -29,28 +30,28 @@ def get_upload_url(group_id):
     return upload_link
 
 
-def fetch_image_to_memory(photo_url, group_id):
-    if not photo_url:
+def fetch_image_to_memory(file_path, group_id):
+    if not file_path or not os.path.exists(file_path):
         return None
 
     upload_url = get_upload_url(group_id)
-    response = requests.get(photo_url)
-    response.raise_for_status()
-    photo = response.content
-    file_like = BytesIO(photo)
-    files = {
-        'photo': ('photo.jpg', file_like)
-    }
-    upload_response = requests.post(upload_url, files=files)
-    media_id = upload_response.json()
-    return media_id
+
+    with open(file_path, 'rb') as f:
+        files = {
+            'photo': (os.path.basename(file_path), f)
+        }
+        upload_response = requests.post(upload_url, files=files)
+        upload_response.raise_for_status()
+
+    return upload_response.json()
 
 
 def post_to_group(group_id, photo_tokens=None, text=None,):
     media = []
 
     if text:
-        media.append({"type": "text", "text": text})
+        cleaned_text = replace_quotes_and_dashes(text)
+        media.append({"type": "text", "text": cleaned_text})
 
     if photo_tokens:
         media.append({
@@ -75,25 +76,35 @@ def post_to_group(group_id, photo_tokens=None, text=None,):
     }
 
     response = requests.post("https://api.ok.ru/fb.do", params=payload)
+    response.raise_for_status()
     return response.json()
 
 
 def main():
-    photo_url = input("Введите ссылку на фото (оставьте пустым если без фото): ").strip()
-    text = input("Введите текст поста (оставьте пустым если без текста): ").strip()
+    image_input = input("Введите ссылку на изображение или путь к файлу (оставьте пустым если без фото): ").strip()
+    text = input("Введите текст поста: ").strip()
 
-    results = []
+    file_path = None
+    temp_downloaded = False
+
+    if image_input:
+        file_path, _ = get_image(image_input)
+        if not os.path.samefile(os.path.dirname(file_path), os.getcwd()):
+            temp_downloaded = True
+        elif file_path.startswith(os.getcwd()) and "temp_download" in file_path:
+            temp_downloaded = True
+
     for group_id in group_ids:
         photo_tokens = None
-        if photo_url:
-            upload_data = fetch_image_to_memory(photo_url, group_id)
+        if file_path:
+            upload_data = fetch_image_to_memory(file_path, group_id)
             if upload_data and 'photos' in upload_data:
                 photo_tokens = [photo['token'] for photo in upload_data['photos'].values()]
 
-        result = post_to_group(group_id, photo_tokens, text if text else None)
-        results.append(result)
+        post_to_group(group_id, photo_tokens, text if text else None)
 
-    return results[0] if len(results) == 1 else results
+    if temp_downloaded and os.path.exists(file_path):
+        os.remove(file_path)
 
 if __name__ in "__main__":
     main()
