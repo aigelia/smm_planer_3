@@ -47,18 +47,15 @@ def need_publish_or_not(records, platform):
         d = row.get(date_field) or ''
         t = row.get(time_field) or ''
 
-        # 1) нет даты или времени → публикуем сразу
         if not d or not t:
             ready.append(row)
             continue
 
-        # 2+3) разбираем "DD.MM.YYYY HH:MM"
         try:
             scheduled = datetime.strptime(f"{d} {t}", "%d.%m.%Y %H:%M")
         except ValueError:
             continue
 
-        # если время настало или уже прошло
         if scheduled <= now:
             ready.append(row)
 
@@ -70,18 +67,16 @@ def run_cycle():
     table_url = os.environ['GOOGLE_TABLE_LINK']
     creds = os.environ.get('GOOGLE_CREDENTIALS', 'google_client.json')
 
-    # Столбцы для отметок
-    tg_published_cell = 'K'  # tg_published
-    vk_published_cell = 'L'  # vk_published
-    ok_published_cell = 'M'  # ok_published
+    # Токены и столбцы
+    tg_published_cell = 'K'
+    vk_published_cell = 'L'
+    ok_published_cell = 'M'
+    vk_token = os.environ['VK_ACCESS_TOKEN']
 
-    # Читаем все записи из таблицы
     records = get_google_table_records(creds, table_url)
 
     # --- Telegram ---
-    tg_posts = need_publish_or_not(
-        get_unpublished_records(records, 'tg'), 'tg'
-    )
+    tg_posts = need_publish_or_not(get_unpublished_records(records, 'tg'), 'tg')
     for post in tg_posts:
         try:
             raw = fetch_google_doc_text(post['google_doc'])
@@ -107,27 +102,33 @@ def run_cycle():
             print(f"[TG] Ошибка при публикации поста {post['post_id']}: {e}")
 
     # --- VKontakte ---
-    vk_posts = need_publish_or_not(
-        get_unpublished_records(records, 'vk'), 'vk'
-    )
+    vk_posts = need_publish_or_not(get_unpublished_records(records, 'vk'), 'vk')
     for post in vk_posts:
         try:
             raw = fetch_google_doc_text(post['google_doc'])
             clean = replace_quotes_and_dashes(raw)
 
             media_path = None
+            media_type = None
             if post['media']:
                 try:
                     media_path, _ = get_image(post['media'])
+                    if media_path.lower().endswith('.gif'):
+                        media_type = 'gif'
+                    else:
+                        media_type = 'image'
                 except Exception as e:
                     print(f"[VK] Не удалось скачать медиа для поста {post['post_id']}: {e}")
 
             groups = {grp.strip() for grp in post['vk_pages'].split(',') if grp.strip()}
             for group in groups:
-                post_on_vk.publish_on_vk(
-                    owner_id=group,
-                    post_text=clean,
-                    media_path=media_path
+                # Передаем токен, ID группы, тип медиа и путь к файлу как saved_file
+                post_on_vk.publish_post_in_vk(
+                    vk_access_token=vk_token,
+                    vk_page_id=group,
+                    media_type=media_type,
+                    saved_file=media_path,
+                    text=clean
                 )
 
             write_data_in_table_cell(post['post_id'], vk_published_cell, 'TRUE')
@@ -135,9 +136,7 @@ def run_cycle():
             print(f"[VK] Ошибка при публикации поста {post['post_id']}: {e}")
 
     # --- Odnoklassniki ---
-    ok_posts = need_publish_or_not(
-        get_unpublished_records(records, 'ok'), 'ok'
-    )
+    ok_posts = need_publish_or_not(get_unpublished_records(records, 'ok'), 'ok')
     for post in ok_posts:
         try:
             raw = fetch_google_doc_text(post['google_doc'])
@@ -152,10 +151,10 @@ def run_cycle():
 
             pages = {pg.strip() for pg in post['ok_pages'].split(',') if pg.strip()}
             for page in pages:
-                post_on_ok.publish_on_ok(
-                    page_id=page,
-                    post_text=clean,
-                    media_path=media_path
+                post_on_ok.publish_post_to_ok(
+                    text=clean,
+                    photo_path=media_path,
+                    group_ids=[int(page)]
                 )
 
             write_data_in_table_cell(post['post_id'], ok_published_cell, 'TRUE')
@@ -164,7 +163,7 @@ def run_cycle():
 
 
 def main():
-    print("SMM Planer запущен. Проверяю каждые 60 секунд...")
+    print("SMM Planer запущен. Проверяю каждую минуту...")
     while True:
         run_cycle()
         time.sleep(60)
