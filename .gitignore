@@ -6,6 +6,7 @@ __pycache__/
 .DS_Store
 __pycache__
 temp_download*
+google_client.json
 
 # C extensions
 *.so
