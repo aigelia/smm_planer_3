@@ -143,13 +143,13 @@ def run_cycle():
             clean = replace_quotes_and_dashes(raw)
 
             media_path = None
-            if post['media']:
+            if post['media'] and str(post['media']).startswith("http"):
                 try:
                     media_path, _ = get_image(post['media'])
                 except Exception as e:
                     print(f"[OK] Не удалось скачать медиа для поста {post['post_id']}: {e}")
 
-            pages = {pg.strip() for pg in post['ok_pages'].split(',') if pg.strip()}
+            pages = {pg.strip() for pg in str(post['ok_pages']).split(',') if pg.strip()}
             for page in pages:
                 post_on_ok.publish_post_to_ok(
                     text=clean,
