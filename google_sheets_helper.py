@@ -1,26 +1,28 @@
+import os
 from pathlib import Path
-
+from dotenv import load_dotenv
 from gspread import service_account
+
+load_dotenv()
+GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')
+GOOGLE_TABLE_LINK = os.getenv('GOOGLE_TABLE_LINK')
+if not GOOGLE_CREDENTIALS or not GOOGLE_TABLE_LINK:
+    raise EnvironmentError(
+        "Переменные окружения GOOGLE_CREDENTIALS и GOOGLE_TABLE_LINK должны быть заданы в .env"
+    )
 
 
 def get_google_table_records(path_to_google_credentials_file, google_table_url):
-        """Получает все записи google таблицы в виде списка словарей."""
-
-        client_info = Path(path_to_google_credentials_file)
-        client = service_account(filename=client_info)
-
-        table = client.open_by_url(google_table_url)
-        sheet = table.sheet1
-
-        return sheet.get_all_records()
+    """Получает все записи Google таблицы в виде списка словарей."""
+    client = service_account(filename=Path(path_to_google_credentials_file))
+    table = client.open_by_url(google_table_url)
+    sheet = table.sheet1
+    return sheet.get_all_records()
 
 
-def write_data_in_table_cell(path_to_google_credentials_file, google_table_url, post_id, cell_letter):
-        """Записывает данные в конкретную ячейку таблицы."""
-        client_info = Path(path_to_google_credentials_file)
-        client = service_account(filename=client_info)
-
-        table = client.open_by_url(google_table_url)
-        sheet = table.sheet1
-
-        sheet.update(f'{cell_letter}{str(post_id + 1)}', 'Опубликовано')
+def write_data_in_table_cell(post_id: int, cell_letter: str, value: str = 'Опубликовано'):
+    """Добавляет отметку о публикации."""
+    client = service_account(filename=GOOGLE_CREDENTIALS)
+    sheet = client.open_by_url(GOOGLE_TABLE_LINK).sheet1
+    target_cell = f"{cell_letter}{post_id + 1}"
+    sheet.update_acell(target_cell, value)
