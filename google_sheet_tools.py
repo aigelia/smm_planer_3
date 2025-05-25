@@ -4,6 +4,8 @@ from gspread import service_account
 
 
 def get_google_table_records(path_to_google_credentials_file, google_table_url):
+        """Получает все записи google таблицы в виде списка словарей."""
+
         client_info = Path(path_to_google_credentials_file)
         client = service_account(filename=client_info)
 
@@ -14,6 +16,7 @@ def get_google_table_records(path_to_google_credentials_file, google_table_url):
 
 
 def write_data_in_table_cell(path_to_google_credentials_file, google_table_url, post_id, cell_letter):
+        """Записывает данные в конкретную ячейку таблицы."""
         client_info = Path(path_to_google_credentials_file)
         client = service_account(filename=client_info)
 
