@@ -5,7 +5,7 @@ import telegram
 
 def publish_on_telegram(channel_id, post_text, media_path=None):
     load_dotenv()
-    tg_token = os.getenv('TG_TOKEN')
+    tg_token = os.environ['TG_TOKEN']
     bot = telegram.Bot(token=tg_token)
 
     if media_path:
