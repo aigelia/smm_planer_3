@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from text_cleaner import replace_quotes_and_dashes
+from text_helper import replace_quotes_and_dashes
 from media_helper import get_image
 import os
 import requests
