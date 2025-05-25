@@ -4,7 +4,7 @@ from pprint import pprint
 
 from dotenv import load_dotenv
 
-from google_table_tools import get_google_table_records
+from google_sheet_tools import get_google_table_records
 
 
 def get_unpublished_vk_records(google_table_records):
