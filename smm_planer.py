@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 #import post_on_ok
 import post_on_vk
 import post_on_tg
-from google_sheet_tools import get_google_table_records, write_data_in_table_cell
+from google_sheets_helper import get_google_table_records, write_data_in_table_cell
 from media_helper import extract_drive_url, download_file, get_image
 from text_helper import extract_doc_id, fetch_google_doc_text, replace_quotes_and_dashes
 
