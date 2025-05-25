@@ -97,7 +97,7 @@ def run_cycle():
                     media_path=media_path
                 )
 
-            write_data_in_table_cell(post['post_id'], tg_published_cell, 'TRUE')
+            write_data_in_table_cell(post['post_id'], tg_published_cell, 'Опубликовано')
         except Exception as e:
             print(f"[TG] Ошибка при публикации поста {post['post_id']}: {e}")
 
@@ -131,7 +131,7 @@ def run_cycle():
                     text=clean
                 )
 
-            write_data_in_table_cell(post['post_id'], vk_published_cell, 'TRUE')
+            write_data_in_table_cell(post['post_id'], vk_published_cell, 'Опубликовано')
         except Exception as e:
             print(f"[VK] Ошибка при публикации поста {post['post_id']}: {e}")
 
@@ -157,7 +157,7 @@ def run_cycle():
                     group_ids=[int(page)]
                 )
 
-            write_data_in_table_cell(post['post_id'], ok_published_cell, 'TRUE')
+            write_data_in_table_cell(post['post_id'], ok_published_cell, 'Опубликовано')
         except Exception as e:
             print(f"[OK] Ошибка при публикации поста {post['post_id']}: {e}")
 
