@@ -1,11 +1,7 @@
-import io
-import os
-
 import requests
-from dotenv import load_dotenv
 
 
-def get_server_upload_url(vk_access_token, vk_page_id):
+def get_image_upload_url(vk_access_token, vk_page_id):
     vk_api_url = 'https://api.vk.com/method/photos.getWallUploadServer'
 
     query_parameters = {
@@ -14,29 +10,22 @@ def get_server_upload_url(vk_access_token, vk_page_id):
         'v': '5.199'
     }
 
-    server_upload_url = requests.post(vk_api_url, data=query_parameters)
-    server_upload_url.raise_for_status()
+    image_upload_url = requests.post(vk_api_url, data=query_parameters)
+    image_upload_url.raise_for_status()
 
-    return server_upload_url.json()['response']['upload_url']
+    return image_upload_url.json()['response']['upload_url']
 
 
-def send_image_to_server(vk_image_url, server_upload_url):
-    image_response = requests.get(vk_image_url)
-    image_response.raise_for_status()
-    image_response = image_response.content
+def upload_image(vk_image_path, image_upload_url):
+    with open(vk_image_path, 'rb') as image:
+        image_params = {
+            'photo': image
+        }
 
-    image_bytes = io.BytesIO(image_response)
+        uploaded_image = requests.post(image_upload_url, files=image_params)
+        uploaded_image.raise_for_status()
 
-    image_bytes.name = "photo.jpg"
-
-    image_params = {
-        "photo": (image_bytes.name, image_bytes, "image/jpeg")
-    }
-
-    uploaded_image = requests.post(server_upload_url, files=image_params)
-    uploaded_image.raise_for_status()
-
-    return uploaded_image.json()
+        return uploaded_image.json()
 
 
 def save_image_on_wall(vk_access_token, vk_page_id, uploaded_image):
@@ -57,17 +46,61 @@ def save_image_on_wall(vk_access_token, vk_page_id, uploaded_image):
     return saved_image.json()
 
 
-def publish_post_in_vk(vk_access_token, vk_page_id, saved_image, text, date_time):
-    owner_id = saved_image['response'][0]['owner_id']
-    photo_id = saved_image['response'][0]['id']
+def get_gif_upload_url(vk_access_token, vk_page_id):
+    vk_api_url = 'https://api.vk.com/method/docs.getWallUploadServer'
+
+    query_params = {
+        'group_id': vk_page_id,
+        'access_token': vk_access_token,
+        'v': '5.199'
+    }
+
+    gif_upload_url = requests.get(vk_api_url, params=query_params)
+    gif_upload_url.raise_for_status()
+    print(gif_upload_url.json())
+
+    return gif_upload_url.json()['response']['upload_url']
+
+
+def upload_gif(gif_upload_url, vk_gif_path):
+    with open(vk_gif_path, 'rb') as gif:
+        query_params = {'file': gif}
+
+        uploaded_gif = requests.post(gif_upload_url, files=query_params)
+        uploaded_gif.raise_for_status()
+
+        return uploaded_gif.json()['file']
+
+
+def save_doc(vk_access_token, uploaded_gif):
+    query_params = {
+        'file': uploaded_gif,
+        'access_token': vk_access_token,
+        'v': '5.199'
+    }
+
+    saved_doc = requests.post('https://api.vk.com/method/docs.save', data=query_params)
+    saved_doc.raise_for_status()
+
+    return saved_doc.json()['response']['doc']
+
+
+def publish_post_in_vk(vk_access_token, vk_page_id, saved_file, text, media_type):
+    if media_type == 'gif':
+        owner_id = saved_file["owner_id"]
+        photo_id = saved_file['id']
+        attachments = f'doc{owner_id}_{photo_id}'
+    if media_type == 'image':
+        owner_id = saved_file['response'][0]['owner_id']
+        photo_id = saved_file['response'][0]['id']
+        attachments = f'photo{owner_id}_{photo_id}'
 
     vk_api_url = 'https://api.vk.com/method/wall.post'
 
     query_parameters = {
         'owner_id': f'-{vk_page_id}',
         'message': text,
-        'attachments': f'photo{owner_id}_{photo_id}',
-        'publish_date': date_time,
+        'attachments': attachments,
         'access_token': vk_access_token,
         'v': '5.199'
     }
@@ -78,29 +111,4 @@ def publish_post_in_vk(vk_access_token, vk_page_id, saved_image, text, date_time
     return post_response.json()
 
 
-def main():
-    load_dotenv()
-    vk_access_token = os.environ['VK_ACCESS_TOKEN']
 
-    vk_post_ids = ''
-    vk_page_ids = ['230572126', '230578699']
-    vk_publication_dates = ''
-    vk_publication_times = ''
-    vk_google_doc_urls = ''
-    vk_image_url = 'https://upload.wikimedia.org/wikipedia/commons/3/3f/HST-SM4.jpeg'
-    vk_successful_publications = ''
-
-    server_upload_url = get_server_upload_url(vk_access_token, vk_page_ids[0])
-    uploaded_image = send_image_to_server(vk_image_url, server_upload_url)
-    saved_image = save_image_on_wall(vk_access_token, vk_page_ids[0], uploaded_image)
-    print(publish_post_in_vk(vk_access_token, vk_page_ids[0], saved_image, '', 1747929439))
-
-
-if __name__ == '__main__':
-    main()
-
-
-# TODO: Сделать проверку подключения к серверу и если проблемы,
-#  через какое то время попробовать еще раз
-
-# TODO: Учесть формат картинки, она может быть гифкой
