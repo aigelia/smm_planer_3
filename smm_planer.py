@@ -25,6 +25,8 @@ def get_unpublished_vk_records(google_table_records):
 
 
 def main():
+    vk_published_cell, tg_published_cell, ok_published_cell = 'G', 'K', 'O'
+
     try:
         load_dotenv()
         table_url = os.environ['GOOGLE_TABLE_LINK']
