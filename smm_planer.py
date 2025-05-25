@@ -1,5 +1,7 @@
 import os
 
+from pprint import pprint
+
 from dotenv import load_dotenv
 
 #import post_on_ok
@@ -23,7 +25,7 @@ def get_unpublished_vk_records(google_table_records):
         'vk_published',
     )
 
-    if not google_table_records.get('vk_pages') and google_table_records.get('vk_published'):
+    if not google_table_records.get('vk_pages') or google_table_records.get('vk_published'):
         return {}
 
     return {vk_field: google_table_records[vk_field] for vk_field in vk_fields}
@@ -67,6 +69,13 @@ def get_unpublished_tg_records(google_table_records):
     return {tg_field: google_table_records[tg_field] for tg_field in tg_fields}
 
 
+def need_publish_or_not(publication_status, groups):
+    if not publication_status and groups:
+        return True
+    else:
+        return None
+
+
 def main():
     vk_published_cell, tg_published_cell, ok_published_cell = 'G', 'K', 'O'
 
@@ -92,13 +101,20 @@ def main():
         #unpublished_ok_records = get_unpublished_ok_records(google_table_records)
         #unpublished_tg_records = get_unpublished_tg_records(google_table_records)
 
-        if unpublished_vk_records:
+        if unpublished_vk_records and need_publish_or_not(
+                unpublished_vk_records['vk_published'], unpublished_vk_records['vk_pages']
+        ):
             all_unpublished_vk_records.append(unpublished_vk_records)
-        # if unpublished_ok_records:
-        #     all_unpublished_ok_records.append(unpublished_ok_records)
-        # if unpublished_tg_records:
-        #     all_unpublished_tg_records.append(unpublished_tg_records)
 
+        # if unpublished_ok_records and need_publish_or_not(
+        #         unpublished_ok_records['ok_published'], unpublished_ok_records['ok_pages']
+        # ):
+        #     all_unpublished_ok_records.append(unpublished_ok_records)
+        #
+        # if unpublished_tg_records and need_publish_or_not(
+        #         unpublished_tg_records['tg_published'], unpublished_tg_records['tg_pages']
+        # ):
+        #     all_unpublished_tg_records.append(unpublished_tg_records)
 
 
 if __name__ == '__main__':
