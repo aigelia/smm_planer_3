@@ -22,6 +22,3 @@ def write_data_in_table_cell(path_to_google_credentials_file, google_table_url, 
         sheet = table.sheet1
 
         sheet.update(f'{cell_letter}{str(post_id)}', 'Опубликовано')
-
-
-# # TODO: Предоставить пользователю credentials?
