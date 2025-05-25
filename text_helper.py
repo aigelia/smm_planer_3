@@ -16,7 +16,6 @@ def fetch_google_doc_text(doc_url):
 
     response = requests.get(export_url)
     response.raise_for_status()
-    clear_text = replace_quotes_and_dashes(response.text)
     return response.text
 
 
