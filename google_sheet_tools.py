@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import requests
 from gspread import service_account
 
 
@@ -21,4 +20,4 @@ def write_data_in_table_cell(path_to_google_credentials_file, google_table_url, 
         table = client.open_by_url(google_table_url)
         sheet = table.sheet1
 
-        sheet.update(f'{cell_letter}{str(post_id)}', 'Опубликовано')
+        sheet.update(f'{cell_letter}{str(post_id + 1)}', 'Опубликовано')
