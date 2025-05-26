@@ -1,8 +1,5 @@
-import os
 import time
 from datetime import datetime
-
-from dotenv import load_dotenv
 
 import post_on_tg
 import post_on_vk
@@ -32,28 +29,36 @@ def get_unpublished_records(records, platform):
 
 
 def need_publish_or_not(records, platform):
-    """
-    Фильтрует записи, оставляя только те, что пора публиковать:
-      1) нет даты или нет времени — мгновенная публикация
-      2) время в прошлом — «догоняем» пропущенные
-      3) указанное время <= сейчас
-    """
+    """Фильтрует записи, оставляя только те, что пора публиковать."""
     date_field = f"{platform}_date"
     time_field = f"{platform}_time"
     now = datetime.now()
     ready = []
+    dt_format = "%d.%m.%Y %H:%M"
 
     for row in records:
         d = row.get(date_field) or ''
         t = row.get(time_field) or ''
 
-        if not d or not t:
+        if not d and not t:
+            ready.append(row)
+            continue
+
+        if d and t:
+            dt_str = f"{d} {t}"
+        elif d and not t:
+            dt_str = f"{d} 00:00"
+        elif not d and t:
+            today_str = datetime.now().strftime("%d.%m.%Y")
+            dt_str = f"{today_str} {t}"
+        else:
             ready.append(row)
             continue
 
         try:
-            scheduled = datetime.strptime(f"{d} {t}", "%d.%m.%Y %H:%M")
+            scheduled = datetime.strptime(dt_str, dt_format)
         except ValueError:
+            print('Некорректно указана дата или время.')
             continue
 
         if scheduled <= now:
@@ -63,17 +68,11 @@ def need_publish_or_not(records, platform):
 
 
 def run_cycle():
-    load_dotenv()
-    table_url = os.environ['GOOGLE_TABLE_LINK']
-    creds = os.environ.get('GOOGLE_CREDENTIALS', 'google_client.json')
-
-    # Токены и столбцы
     tg_published_cell = 'K'
-    vk_published_cell = 'L'
-    ok_published_cell = 'M'
-    vk_token = os.environ['VK_ACCESS_TOKEN']
+    vk_published_cell = 'G'
+    ok_published_cell = 'O'
 
-    records = get_google_table_records(creds, table_url)
+    records = get_google_table_records()
 
     # --- Telegram ---
     tg_posts = need_publish_or_not(get_unpublished_records(records, 'tg'), 'tg')
@@ -103,6 +102,7 @@ def run_cycle():
 
     # --- VKontakte ---
     vk_posts = need_publish_or_not(get_unpublished_records(records, 'vk'), 'vk')
+
     for post in vk_posts:
         try:
             raw = fetch_google_doc_text(post['google_doc'])
@@ -110,6 +110,7 @@ def run_cycle():
 
             media_path = None
             media_type = None
+
             if post['media']:
                 try:
                     media_path, _ = get_image(post['media'])
@@ -120,16 +121,37 @@ def run_cycle():
                 except Exception as e:
                     print(f"[VK] Не удалось скачать медиа для поста {post['post_id']}: {e}")
 
-            groups = {grp.strip() for grp in post['vk_pages'].split(',') if grp.strip()}
+            post['vk_pages'] = str(post['vk_pages'])
+            groups = [group.strip() for group in post['vk_pages'].split(',')]
+
             for group in groups:
-                # Передаем токен, ID группы, тип медиа и путь к файлу как saved_file
-                post_on_vk.publish_post_in_vk(
-                    vk_access_token=vk_token,
-                    vk_page_id=group,
-                    media_type=media_type,
-                    saved_file=media_path,
-                    text=clean
-                )
+                if media_type == 'gif':
+                    upload_url = post_on_vk.get_gif_upload_url(group)
+                    uploaded_gif = post_on_vk.upload_gif(media_path, upload_url)
+                    saved_gif = post_on_vk.save_doc(uploaded_gif)
+                    post_on_vk.publish_post_in_vk(
+                        vk_page_id=group,
+                        media_type=media_type,
+                        saved_file=saved_gif,
+                        text=clean
+                    )
+
+                if media_type == 'image':
+                    upload_url = post_on_vk.get_image_upload_url(group)
+                    uploaded_image = post_on_vk.upload_image(media_path, upload_url)
+                    saved_image = post_on_vk.save_image_on_wall(group, uploaded_image)
+                    post_on_vk.publish_post_in_vk(
+                        vk_page_id=group,
+                        media_type=media_type,
+                        saved_file=saved_image,
+                        text=clean
+                    )
+
+                if not media_type:
+                    post_on_vk.publish_post_in_vk(
+                        vk_page_id=group,
+                        text=clean
+                    )
 
             write_data_in_table_cell(post['post_id'], vk_published_cell, 'Опубликовано')
         except Exception as e:
