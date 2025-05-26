@@ -1,7 +1,8 @@
 import os
-from pathlib import Path
+
 from dotenv import load_dotenv
 from gspread import service_account
+
 
 load_dotenv()
 GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')
@@ -12,10 +13,10 @@ if not GOOGLE_CREDENTIALS or not GOOGLE_TABLE_LINK:
     )
 
 
-def get_google_table_records(path_to_google_credentials_file, google_table_url):
+def get_google_table_records():
     """Получает все записи Google таблицы в виде списка словарей."""
-    client = service_account(filename=Path(path_to_google_credentials_file))
-    table = client.open_by_url(google_table_url)
+    client = service_account(filename=GOOGLE_CREDENTIALS)
+    table = client.open_by_url(GOOGLE_TABLE_LINK)
     sheet = table.sheet1
     return sheet.get_all_records()
 
